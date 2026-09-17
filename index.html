@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Everything is same-origin and nothing is fetched after install. connect-src 'none' means a
+     bug cannot become an exfiltration; worker-src 'self' is what lets the key worker start. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'none';
+  script-src 'self';
+  style-src 'self';
+  img-src 'self' data:;
+  font-src 'self';
+  manifest-src 'self';
+  connect-src 'none';
+  worker-src 'self';
+  child-src 'self';
+  form-action 'none';
+  base-uri 'none';
+  frame-src 'none';
+  object-src 'none';
+  media-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow, noarchive, noimageindex">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F1EA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- Still needed by iOS versions that predate the standard name. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dying Message">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Dying Message</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./app.css">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+</head>
+<body>
+<div id="app"></div>
+
+<!-- Painted synchronously on visibilitychange and pagehide, before the task-switcher snapshot.
+     The mark is the app's own: a padlock in a switcher advertises what the app is for. -->
+<div id="blank" hidden>
+  <div class="blank__mark"></div>
+  <p class="blank__t" id="blank-text"></p>
+</div>
+
+<!-- The one page this app prints. Filled in by the plate template view. -->
+<div id="print"></div>
+
+<noscript>
+  <p style="padding:24px;font:17px/1.6 system-ui">
+    Dying Message needs JavaScript. All of its work — encryption, storage, everything —
+    happens on this device, in the browser.
+  </p>
+</noscript>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
