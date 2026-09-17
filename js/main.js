@@ -18,6 +18,7 @@ registerViews({
   damaged: gate.damagedView,
   update: gate.updateView,
   lang: gate.langView,
+  vaults: gate.vaultsView,
 
   genesis: genesis.genesisView,
   'genesis-pass': genesis.genesisPassView,

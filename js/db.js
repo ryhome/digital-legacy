@@ -1,9 +1,14 @@
-// IndexedDB "dm" v1. Two stores: one meta record, one record per sealed entry.
+// IndexedDB "dm" v2. Two stores: one meta record per vault (at most MAX_VAULTS of them), one
+// record per sealed entry, each entry stamped with the id of the vault it belongs to.
+// v1 held exactly one vault under the id 'vault'; that record is kept as-is and its entries are
+// stamped on upgrade, so a v1 install becomes a one-vault v2 install without a rewrite.
 // WebKit can report IDB as unavailable for a moment after a cold launch, so open()
 // is wrapped in a timeout with backoff before the app decides storage is missing.
 
 const NAME = 'dm';
-const VERSION = 1;
+const VERSION = 2;
+export const MAX_VAULTS = 3;
+const LEGACY_ID = 'vault';
 const OPEN_TIMEOUT = 4000;
 const OPEN_TRIES = 4;
 
@@ -29,6 +34,16 @@ function openOnce() {
         db.createObjectStore('meta', { keyPath: 'id' });
         const entries = db.createObjectStore('entries', { keyPath: 'id' });
         entries.createIndex('seq', 'seq', { unique: false });
+      }
+      if (ev.oldVersion < 2) {
+        const entries = req.transaction.objectStore('entries');
+        entries.createIndex('vaultId', 'vaultId', { unique: false });
+        entries.openCursor().onsuccess = (e) => {
+          const c = e.target.result;
+          if (!c) return;
+          if (!c.value.vaultId) c.update({ ...c.value, vaultId: LEGACY_ID });
+          c.continue();
+        };
       }
     };
     req.onblocked = () => { /* another tab holds an older version; the timeout will fire */ };
@@ -87,44 +102,59 @@ const request = (r) => new Promise((resolve, reject) => {
   r.onerror = () => reject(r.error);
 });
 
-export const getMeta = () => tx('meta', 'readonly', (s) => request(s.get('vault')));
+export const allMeta = () => tx('meta', 'readonly', (s) => request(s.getAll()))
+  .then((rows) => rows.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
+export const getMeta = (id) => tx('meta', 'readonly', (s) => request(s.get(id)));
 export const putMeta = (meta) => tx('meta', 'readwrite', (s) => request(s.put(meta)));
-export const allEntries = () => tx('entries', 'readonly', (s) => request(s.getAll()))
+export const allEntries = (vaultId) => tx('entries', 'readonly',
+  (s) => request(s.index('vaultId').getAll(vaultId)))
   .then((rows) => rows.sort((a, b) => a.seq - b.seq));
-export const putEntry = (e) => tx('entries', 'readwrite', (s) => request(s.put(e)));
 export const deleteEntry = (id) => tx('entries', 'readwrite', (s) => request(s.delete(id)));
 
-/** Write many entries in one transaction — a restore is all-or-nothing. */
-export const putEntries = (rows) => tx('entries', 'readwrite',
-  (s) => Promise.all(rows.map((e) => request(s.put(e)))));
+// The vault id is stamped here and nowhere else, so no caller can write an orphan entry.
+export const putEntry = (vaultId, e) => tx('entries', 'readwrite',
+  (s) => request(s.put({ ...e, vaultId })));
 
-/** Replace every entry atomically. Used by the passphrase re-key. */
-export async function replaceAll(meta, entries) {
-  const d = await db();
-  return new Promise((resolve, reject) => {
+/** Write many entries in one transaction — a restore is all-or-nothing. */
+export const putEntries = (vaultId, rows) => tx('entries', 'readwrite',
+  (s) => Promise.all(rows.map((e) => request(s.put({ ...e, vaultId })))));
+
+function bothStores(fn) {
+  return db().then((d) => new Promise((resolve, reject) => {
     const t = d.transaction(['meta', 'entries'], 'readwrite');
     t.oncomplete = resolve;
     t.onerror = () => reject(t.error);
     t.onabort = () => reject(t.error || new Error('aborted'));
-    t.objectStore('entries').clear();
-    for (const e of entries) t.objectStore('entries').put(e);
-    t.objectStore('meta').put(meta);
-  });
+    fn(t.objectStore('meta'), t.objectStore('entries'));
+  }));
 }
 
-export async function destroyVault() {
-  if (dbp) { (await dbp).close(); dbp = null; }
-  await new Promise((resolve, reject) => {
-    const r = indexedDB.deleteDatabase(NAME);
-    r.onsuccess = resolve;
-    r.onerror = () => reject(r.error);
-    r.onblocked = resolve;
-  });
+/** Delete one vault's entries inside an open transaction, leaving the other vaults alone. */
+function deleteOwn(entries, vaultId) {
+  entries.index('vaultId').openKeyCursor(vaultId).onsuccess = (e) => {
+    const c = e.target.result;
+    if (!c) return;
+    entries.delete(c.primaryKey);
+    c.continue();
+  };
 }
+
+/** Replace one vault's entries atomically. Used by the passphrase re-key. */
+export const replaceAll = (meta, entries) => bothStores((m, es) => {
+  deleteOwn(es, meta.id);
+  for (const e of entries) es.put({ ...e, vaultId: meta.id });
+  m.put(meta);
+});
+
+/** Remove one vault and everything sealed into it. The others are untouched. */
+export const removeVault = (vaultId) => bothStores((m, es) => {
+  deleteOwn(es, vaultId);
+  m.delete(vaultId);
+});
 
 /** Cheap structural check so a corrupt vault fails loudly instead of half-working. */
 export function metaLooksValid(m) {
-  return !!m && m.id === 'vault' && m.v === 1
+  return !!m && typeof m.id === 'string' && m.id.length > 0 && m.v === 1
     && m.pkC instanceof Uint8Array && m.pkC.length === 32
     && m.pkPq instanceof Uint8Array && m.pkPq.length === 1184
     && m.kdf && m.kdf.algo === 'argon2id'

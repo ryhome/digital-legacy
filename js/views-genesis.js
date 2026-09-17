@@ -13,16 +13,31 @@ import { go, loadVault, render, state } from './app.js';
 import {
   KDF_DEFAULTS, fingerprint, generateWords, sealEntry, wordIndex, wordlist,
 } from './vault.js';
-import { randomBytes, zero } from './codec.js';
+import { hex, randomBytes, zero } from './codec.js';
 import { heldWords, hold, release } from './held.js';
 
 let g = null;
 
+/**
+ * Backgrounding during setup wipes the phrase: 24 words must never sit in memory behind a task
+ * switcher, and that part is not negotiable. But the five acknowledgements and the passphrase
+ * choice are not secrets, and discarding those too punished someone for glancing at another
+ * app — they survive, so coming back costs a tap instead of the whole screen.
+ */
 export function resetGenesis() {
-  if (g && g.words) g.words.fill('');
-  if (g && g.verify) g.verify.clear();
-  g = null;
+  if (!g) return;
+  const lost = !!g.words;          // true only past C3: a phrase existed, and it is gone now
+  if (g.words) g.words.fill('');
+  g.generated.fill('');
+  g.verify.clear();
   release();
+  g = { ...fresh(), acks: g.acks, passMode: g.passMode, interrupted: lost };
+}
+
+/** Setup finished: the next vault, if there is one, starts from nothing. */
+export function clearGenesis() {
+  resetGenesis();
+  g = null;
 }
 
 function fresh() {
@@ -51,11 +66,13 @@ export function genesisView() {
   const marked = g.acks.filter(Boolean).length;
   const create = btn(t('genesis.warn.create'), {
     kind: 'primary', disabled: marked < 5,
-    onclick: () => go('genesis-pass'),
+    onclick: () => { g.interrupted = false; go('genesis-pass'); },
   });
   return h('div.screen.stack-lg',
     h('h1.t-display', t('genesis.warn.title')),
     h('p.t-body', t('genesis.warn.sub')),
+    // Landing back here with no explanation reads as the app having lost the work.
+    g.interrupted ? caution(null, t('genesis.warn.restarted')) : null,
     h('div.stack', [1, 2, 3, 4, 5].map((n) => ack({
       title: t(`genesis.w${n}.t`), body: t(`genesis.w${n}.b`),
       grave: n === 1, checked: g.acks[n - 1],
@@ -65,7 +82,11 @@ export function genesisView() {
       h('p.t-caption', { style: { textAlign: 'center' } },
         t('genesis.warn.count', { n: marked, total: 5 })),
       create,
-      btn(t('genesis.warn.guidefirst'), { kind: 'quiet', onclick: () => go('guide', { from: 'genesis' }) })));
+      btn(t('genesis.warn.guidefirst'), { kind: 'quiet', onclick: () => go('guide', { from: 'genesis' }) }),
+      // A vault that already exists elsewhere is adopted, not made again. restoreView already
+      // handles the no-vault-here case; it was simply unreachable before a vault existed.
+      btn(t('genesis.warn.import'), { kind: 'quiet', onclick: () => go('restore', { from: 'genesis' }) }),
+      state.vaults.length ? btn(t('vaults.back'), { kind: 'quiet', onclick: () => go('vaults') }) : null));
 }
 
 // ---------------------------------------------------------------- C2 passphrase
@@ -279,8 +300,9 @@ export function genesisCreateView() {
       throw new Error('self-test failed');
     }
 
+    const id = hex(randomBytes(8));
     await db.putMeta({
-      id: 'vault', v: 1, createdAt: Date.now(),
+      id, v: 1, createdAt: Date.now(),
       pkC: res.pkC, pkPq: res.pkPq,
       fingerprint: res.fingerprint,
       kdf: res.kdf, norm: 'NFKD',
@@ -288,7 +310,7 @@ export function genesisCreateView() {
       lastBackupAt: null, backedUpSeq: 0,
     });
     await db.persist();
-    await loadVault();
+    await loadVault(id);
     g.fp = res.fingerprint;
     // Held only for the plate print offered on the next screen; released on lock or on leaving.
     hold(g.words);
@@ -325,10 +347,10 @@ export function genesisDoneView() {
       h('div.fp', fp || ''),
       h('p.t-small', t('done.fp.note'))),
     card('caution', t('done.left.t'), t('done.left.b')),
-    btn(t('done.backup'), { kind: 'primary', onclick: () => { resetGenesis(); go('backup', { first: true }); } }),
+    btn(t('done.backup'), { kind: 'primary', onclick: () => { clearGenesis(); go('backup', { first: true }); } }),
     btn(t('done.print'), { onclick: () => go('print', { from: 'done' }) }),
     h('p.t-caption', t('done.print.note')),
-    btn(t('done.skip'), { kind: 'quiet', onclick: () => { resetGenesis(); go('home'); } }),
+    btn(t('done.skip'), { kind: 'quiet', onclick: () => { clearGenesis(); go('home'); } }),
     h('p.t-caption', t('done.skip.note')));
 }
 

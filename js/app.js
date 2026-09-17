@@ -14,7 +14,8 @@ import { APP_VERSION, RELEASE_HASH, releaseShort } from './version.js';
 export const state = {
   route: 'boot',
   params: {},
-  meta: null,
+  vaults: [],             // every vault record on this device, oldest first
+  meta: null,             // the current one, or null until one is chosen
   entries: [],
   damaged: [],
   session: null,          // { items, openedAt, expiresAt, extensions }
@@ -300,17 +301,27 @@ export function applyUpdate() {
 
 // ---------------------------------------------------------------- vault loading
 
-export async function loadVault() {
-  state.meta = await db.getMeta();
-  state.entries = await db.allEntries();
-  if (!state.meta && state.entries.length) {
-    // Sealed entries with no vault record: re-read once before believing it.
-    state.meta = await db.getMeta();
-    if (!state.meta) state.diag.push(`meta missing with ${state.entries.length} entries`);
-  }
+// Which vault is current is a preference, not a secret: a vault id says nothing about what
+// is inside. Losing it costs one tap on the picker.
+const currentId = () => { try { return localStorage.getItem('dm.vault'); } catch { return null; } };
+
+/** Read every vault, and the entries of the current one — or of `id`, which then becomes current. */
+export async function loadVault(id = currentId()) {
+  state.vaults = await db.allMeta();
+  state.meta = state.vaults.find((v) => v.id === id) || null;
+  if (state.meta) { try { localStorage.setItem('dm.vault', id); } catch { /* ignore */ } }
+  state.entries = state.meta ? await db.allEntries(state.meta.id) : [];
   state.damaged = state.entries.filter((e) => !db.entryLooksValid(e)).map((e) => e.seq);
   state.persisted = await db.persisted();
   return state.meta;
+}
+
+/** Make `id` the current vault and land on its list — or on the damage report if it needs one. */
+export async function openVault(id) {
+  await loadVault(id);
+  if (!state.meta) { go('vaults'); return; }
+  if (!db.metaLooksValid(state.meta)) { go('damaged', { metaBad: true }); return; }
+  go(state.damaged.length ? 'damaged' : 'home');
 }
 
 export const unsavedCount = () => {

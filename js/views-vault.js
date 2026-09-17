@@ -13,9 +13,9 @@ import * as keys from './keys.js';
 import * as db from './db.js';
 import {
   APP_VERSION, applyRelock, applyTheme, checkForUpdate, go, loadVault, lock, markBackedUp,
-  releaseShort, render, state, unsavedCount,
+  openVault, releaseShort, render, state, unsavedCount,
 } from './app.js';
-import { BUCKETS, fromB64, hex, toB64 } from './codec.js';
+import { BUCKETS, fromB64, hex, randomBytes, toB64 } from './codec.js';
 import { sealEntry } from './vault.js';
 
 // ---------------------------------------------------------------- D: home
@@ -62,7 +62,8 @@ export function homeView() {
         btn(t('home.backup'), { disabled: empty, class: 'btn--small', onclick: () => go('backup') }),
         btn(t('home.restore'), { class: 'btn--small', onclick: () => go('restore') }),
         btn(t('home.settings'), { class: 'btn--small', onclick: () => go('settings') })),
-      empty ? h('p.t-caption', t('home.emptydisabled')) : null));
+      empty ? h('p.t-caption', t('home.emptydisabled')) : null,
+      btn(t('home.vaults'), { kind: 'quiet', onclick: () => go('vaults') })));
 }
 
 // ---------------------------------------------------------------- E: write
@@ -105,7 +106,7 @@ export function writeView() {
       pkC: state.meta.pkC, pkPq: state.meta.pkPq,
       seq, timestamp: Date.now(), label: label.trim(), message,
     });
-    await db.putEntry(row);
+    await db.putEntry(state.meta.id, row);
     await loadVault();
     label = ''; message = '';
     go('sealed', { seq });
@@ -236,7 +237,7 @@ function parseBackup(text) {
   const o = JSON.parse(text);
   if (!o || o.kind !== 'dying-message-vault' || o.v !== 1) throw new Error('not a backup');
   const meta = {
-    id: 'vault', v: 1, createdAt: o.meta.createdAt, fingerprint: o.meta.fingerprint,
+    id: hex(randomBytes(8)), v: 1, createdAt: o.meta.createdAt, fingerprint: o.meta.fingerprint,
     norm: 'NFKD', hasPassphrase: !!o.meta.hasPassphrase,
     pkC: fromB64(o.meta.pkC, 32), pkPq: fromB64(o.meta.pkPq, 1184),
     kdf: {
@@ -258,7 +259,7 @@ function parseBackup(text) {
   return { meta, entries };
 }
 
-export function restoreView() {
+export function restoreView({ from } = {}) {
   const out = h('div');
 
   const pick = h('input', {
@@ -269,7 +270,7 @@ export function restoreView() {
       if (!f) return;
       try {
         const parsed = parseBackup(await f.text());
-        out.replaceChildren(outcome(parsed));
+        out.replaceChildren(await outcome(parsed));
       } catch {
         out.replaceChildren(irreversible(null, t('restore.bad')));
       }
@@ -277,7 +278,7 @@ export function restoreView() {
   });
 
   return h('div.screen.stack-lg',
-    header(t('restore.title'), () => go('home')),
+    header(t('restore.title'), () => go(['genesis', 'vaults'].includes(from) ? from : 'home')),
     h('h2.t-title', t('restore.choose')),
     h('p.t-body', t('restore.nophrase')),
     pick,
@@ -293,37 +294,33 @@ export function restoreView() {
     h('p.t-small', t('restore.multidevice')));
 }
 
-function outcome({ meta, entries }) {
-  const here = state.meta;
+async function outcome({ meta, entries }) {
+  const known = state.vaults.find((v) => v.fingerprint === meta.fingerprint);
 
-  if (!here) {
+  // A vault this device has never seen becomes another vault here — if there is room.
+  if (!known) {
+    const summary = h('div.card.mo', t('restore.new.meta', { fp: meta.fingerprint, n: entries.length }));
+    if (state.vaults.length >= db.MAX_VAULTS) {
+      return h('div.stack',
+        irreversible(t('restore.full.t'), t('restore.full.b', { n: db.MAX_VAULTS })), summary);
+    }
     return h('div.stack',
       card('note', t('restore.new.t'), t('restore.new.b')),
-      h('div.card.mo', t('restore.new.meta', { fp: meta.fingerprint, n: entries.length })),
+      summary,
       btn(t('restore.new.go'), {
         kind: 'primary',
         onclick: async () => {
           await db.putMeta(meta);
-          await db.putEntries(entries);
-          await loadVault();
+          await db.putEntries(meta.id, entries);
+          await db.persist();
           announce(t('restore.added', { n: entries.length }));
-          go('home');
+          openVault(meta.id);
         },
       }));
   }
 
-  if (here.fingerprint !== meta.fingerprint) {
-    return h('div.stack',
-      irreversible(t('restore.other.t'), t('restore.other.b')),
-      h('div.card.stack', { style: { gap: '8px' } },
-        h('div.row', h('span.t-small.grow', t('restore.other.here')), h('span.mo', here.fingerprint)),
-        h('div.row', h('span.t-small.grow', t('restore.other.file')), h('span.mo', meta.fingerprint))),
-      h('p.t-small', t('restore.other.how')),
-      btn(t('restore.other.pick'), { onclick: () => go('restore') }));
-  }
-
   // Same vault: union by id. Nothing already here is replaced.
-  const have = new Set(state.entries.map((e) => hex(e.id)));
+  const have = new Set((await db.allEntries(known.id)).map((e) => hex(e.id)));
   const fresh = entries.filter((e) => !have.has(hex(e.id)));
   const title = fresh.length === 0 ? t('restore.same.t.none')
     : fresh.length === 1 ? t('restore.same.t.one') : t('restore.same.t', { n: fresh.length });
@@ -339,10 +336,9 @@ function outcome({ meta, entries }) {
     btn(t('restore.same.go'), {
       kind: 'primary', disabled: fresh.length === 0,
       onclick: async () => {
-        await db.putEntries(fresh);
-        await loadVault();
+        await db.putEntries(known.id, fresh);
         announce(fresh.length === 1 ? t('restore.added.one') : t('restore.added', { n: fresh.length }));
-        go('home');
+        openVault(known.id);
       },
     }));
 }
@@ -428,7 +424,8 @@ export function confirmRemoveView() {
       goLabel: t('confirm.remove.vault.go'),
       onGo: async () => {
         lock({ silent: true });
-        await db.destroyVault();
+        await db.removeVault(state.meta.id);
+        try { localStorage.removeItem('dm.vault'); } catch { /* ignore */ }
         state.meta = null;
         state.entries = [];
         location.reload();

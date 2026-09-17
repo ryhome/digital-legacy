@@ -68,13 +68,18 @@ async function collect() {
 
   // --- what is actually stored right now
   try {
-    const meta = await db.getMeta();
-    const entries = await db.allEntries();
-    add('Vault record', meta ? meta.fingerprint : 'NONE', !!meta);
-    add('Sealed messages', entries.length, null);
-    add('Vault record valid', meta ? (db.metaLooksValid(meta) ? YES : NO) : '—', meta ? db.metaLooksValid(meta) : null);
-    add('Last backup', meta && meta.lastBackupAt
-      ? new Date(meta.lastBackupAt).toISOString().slice(0, 10) : 'never', null);
+    const vaults = await db.allMeta();
+    add('Vaults', `${vaults.length} of ${db.MAX_VAULTS}`, null);
+    if (!vaults.length) add('Vault record', 'NONE', false);
+    for (const meta of vaults) {
+      const entries = await db.allEntries(meta.id);
+      const valid = db.metaLooksValid(meta);
+      add('Vault record', meta.fingerprint, true);
+      add('Sealed messages', entries.length, null);
+      add('Vault record valid', valid ? YES : NO, valid);
+      add('Last backup', meta.lastBackupAt
+        ? new Date(meta.lastBackupAt).toISOString().slice(0, 10) : 'never', null);
+    }
   } catch (err) {
     add('IndexedDB', `FAILED: ${err.message}`, false);
   }

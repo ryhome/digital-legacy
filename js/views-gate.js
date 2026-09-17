@@ -1,11 +1,11 @@
-// A: install gate. B: boot states. Language confirmation.
+// A: install gate. B: boot states. The vault picker. Language confirmation.
 
 import { h } from './dom.js';
 import { t, getLocale, setLocale, detected, formatDate } from './i18n.js';
 import { btn, card, caution, header, irreversible, note, steps } from './ui.js';
 import {
-  APP_VERSION, applyUpdate, boot, db, diagnostics, go, isDesktop, keys, loadVault, platform,
-  releaseShort, render, state,
+  APP_VERSION, applyUpdate, boot, db, diagnostics, go, isDesktop, keys, loadVault, openVault,
+  platform, releaseShort, render, state,
 } from './app.js';
 
 const foot = () => h('p.t-caption', { style: { textAlign: 'center' } }, t('install.foot'));
@@ -142,8 +142,8 @@ export function installView() {
 
   // If a vault was made in this tab before installing, say so here — this is the one place
   // the two storage containers are both visible to the same code.
-  db.getMeta().then((m) => {
-    if (m && !state.browserVaultSeen) { state.browserVaultSeen = true; render(); }
+  db.allMeta().then((list) => {
+    if (list.length && !state.browserVaultSeen) { state.browserVaultSeen = true; render(); }
   }).catch(() => {});
 
   return body;
@@ -204,23 +204,21 @@ export function bootView() {
     step('persist', 'done', state.persisted ? t('boot.yes') : t('boot.no'));
 
     step('read', 'busy');
-    let meta;
     try {
-      meta = await loadVault();
+      await loadVault();
     } catch (err) {
       state.diag.push(String(err.message));
       go('nostore');
       return;
     }
-    step('read', 'done', meta ? (meta.fingerprint || '') : t('boot.no'));
+    const n = state.vaults.length;
+    step('read', 'done', n === 0 ? t('boot.no') : n === 1 ? t('vaults.n.one') : t('vaults.n', { n }));
+    // Seals belong to one vault, and which one is not known until it is picked: openVault()
+    // runs the structural checks on the way in.
+    step('seals', 'done', t('boot.deferred'));
 
-    step('seals', 'busy');
-    if (meta && !db.metaLooksValid(meta)) { go('damaged', { metaBad: true }); return; }
-    step('seals', 'done', state.damaged.length ? String(state.damaged.length) : t('boot.deferred'));
-
-    if (state.damaged.length) { go('damaged'); return; }
-    if (!meta) { go(detected() === 'th' ? 'lang' : 'genesis'); return; }
-    go('home');
+    if (!n) { go(detected() === 'th' ? 'lang' : 'genesis'); return; }
+    go('vaults');
   })();
 
   return h('div.screen.stack-lg', { style: { justifyContent: 'center' } },
@@ -228,6 +226,33 @@ export function bootView() {
     list,
     h('p.t-small', t('boot.explain')),
     h('p.t-caption.mo', { style: { textAlign: 'center' } }, `${APP_VERSION} · ${releaseShort()}`));
+}
+
+// ---------------------------------------------------------------- B3: the vault picker
+
+/** Home for a device with at least one vault. Each row is a vault; the phrase decides the rest. */
+export function vaultsView() {
+  const full = state.vaults.length >= db.MAX_VAULTS;
+  const current = state.meta && state.meta.id;
+  return h('div.screen.stack-lg',
+    h('h1.t-display', t('vaults.title')),
+    h('p.t-body', t('vaults.body')),
+    h('div.list', { role: 'list' }, state.vaults.map((v, i) => {
+      const created = t('vaults.created', { date: formatDate(v.createdAt || 0) });
+      return h('button.entry', {
+        type: 'button', onclick: () => openVault(v.id),
+        'aria-label': t('vaults.open', { fp: v.fingerprint }),
+      },
+      h('span.entry__n', String(i + 1)),
+      h('div.grow',
+        h('div.mo', { style: { fontSize: '17px' } }, v.fingerprint),
+        h('div.entry__meta', v.id === current ? `${created} · ${t('vaults.current')}` : created)));
+    })),
+    h('div.pin-bottom',
+      btn(t('vaults.create'), { kind: 'primary', disabled: full, onclick: () => go('genesis') }),
+      btn(t('vaults.import'), { disabled: full, onclick: () => go('restore', { from: 'vaults' }) }),
+      h('p.t-caption', { style: { textAlign: 'center' } },
+        full ? t('vaults.full', { n: db.MAX_VAULTS }) : t('vaults.limit', { n: db.MAX_VAULTS }))));
 }
 
 // ---------------------------------------------------------------- insecure origin
