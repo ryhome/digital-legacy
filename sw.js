@@ -4,7 +4,7 @@
 // could in principle touch IndexedDB, so this buys availability, not integrity — the backup file
 // is the defence for that.
 
-const RELEASE = '4ef3285178650be22a750daed492e0b2331b062c680f295d987c7f6384e7d055';
+const RELEASE = 'f3d1c365ec2333b360a7077573281d901fdcdf8af00647ab2cc75140c8e288c2';
 const CACHE = `dm-${RELEASE}`;
 
 const ASSETS = [
@@ -28,6 +28,7 @@ const ASSETS = [
   './js/ui.js',
   './js/vault.js',
   './js/version.js',
+  './js/views-diag.js',
   './js/views-gate.js',
   './js/views-genesis.js',
   './js/views-unlock.js',

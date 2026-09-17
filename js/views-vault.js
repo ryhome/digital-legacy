@@ -405,6 +405,7 @@ export function settingsView() {
     h('div.card.stack', { style: { gap: '8px' } },
       kv(t('set.version.app'), APP_VERSION, true),
       kv(t('set.version.hash'), releaseShort(), true),
+      btn(t('diag.open'), { class: 'btn--small', onclick: () => go('diag', { from: 'settings' }) }),
       btn(t('set.checkupdate'), {
         class: 'btn--small',
         onclick: async () => { await checkForUpdate(); go('update'); },

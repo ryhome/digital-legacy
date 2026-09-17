@@ -5,6 +5,7 @@ import * as gate from './views-gate.js';
 import * as genesis from './views-genesis.js';
 import * as vault from './views-vault.js';
 import * as unlock from './views-unlock.js';
+import { diagView } from './views-diag.js';
 import { release } from './held.js';
 
 registerViews({
@@ -12,6 +13,7 @@ registerViews({
   boot: gate.bootView,
   nostore: gate.noStorageView,
   insecure: gate.insecureView,
+  diag: diagView,
   'selftest-failed': gate.selfTestFailedView,
   damaged: gate.damagedView,
   update: gate.updateView,

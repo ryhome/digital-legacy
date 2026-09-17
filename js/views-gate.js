@@ -127,7 +127,9 @@ export function installView() {
       caution(t('install.desktop.safari.t'), t('install.desktop.safari.b')));
   }
 
-  body.append(alreadyInstalled(), foot());
+  body.append(alreadyInstalled(),
+    btn(t('diag.open'), { kind: 'quiet', onclick: () => go('diag', { from: 'install' }) }),
+    foot());
 
   // If a vault was made in this tab before installing, say so here — this is the one place
   // the two storage containers are both visible to the same code.
