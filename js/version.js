@@ -1,4 +1,4 @@
 export const APP_VERSION = 'v1.0.0';
 // Stamped by tools/build.mjs from the SHA-256 of every file in the release.
-export const RELEASE_HASH = '555aeaa5db9dd2c3666575ee72b36c3329398f75b212ea51b9c5d6843adceaf5';
+export const RELEASE_HASH = '3b4d47909be94e87f4b0d435710a5379984116bfe2a25c29450a3cea1b183edf';
 export const releaseShort = () => RELEASE_HASH.slice(0, 8);

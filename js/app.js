@@ -24,6 +24,7 @@ export const state = {
   shareInFlight: false,
   diag: [],
   installPrompt: null,
+  installPromptFired: false,
   browserVaultSeen: false,
   iconsOk: undefined,
   swError: null,
@@ -337,9 +338,17 @@ export async function boot() {
   wireCrashReporting();
   wireKeys();
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
+  // Picked up from js/early.js, which was listening before this module existed.
+  const early = window.__dmInstall || {};
+  if (early.prompt) state.installPrompt = early.prompt;
+  state.installPromptFired = !!early.fired;
+  window.__dmOnInstallPrompt = (e) => {
     state.installPrompt = e;
+    state.installPromptFired = true;
+    if (state.route === 'install') render();
+  };
+  window.addEventListener('appinstalled', () => {
+    state.installPrompt = null;
     if (state.route === 'install') render();
   });
 

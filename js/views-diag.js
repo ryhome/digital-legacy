@@ -25,7 +25,10 @@ async function collect() {
   add('Platform', platform(), null);
 
   // --- installability inputs
+  const early = window.__dmInstall || {};
   add('Install prompt offered', state.installPrompt ? YES : NO, !!state.installPrompt);
+  add('Prompt event fired', early.fired ? `yes, at ${early.at} ms` : NO, !!early.fired);
+  add('Already installed', early.installed ? YES : NO, null);
   if ('serviceWorker' in navigator) {
     const regs = await navigator.serviceWorker.getRegistrations();
     add('Service worker', regs.length ? `${regs.length} registered` : 'none registered', regs.length > 0);
