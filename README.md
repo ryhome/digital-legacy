@@ -202,7 +202,8 @@ no name and have autocomplete, autocorrect, autocapitalise and spellcheck off.
 - A service worker that caches offline but **never activates a new version on its own**. An update
   waits until someone approves it, on a screen showing both release hashes.
 - `node tools/build.mjs` publishes a SHA-256 per file and one release hash, which the app shows in
-  Settings so it can be compared against what is published.
+  Settings so it can be compared against what is published. The manifest verifies with stock tools:
+  `grep -v '^release ' SHA256SUMS | shasum -a 256 -c`
 
 `node tools/audit.mjs` enforces most of this mechanically and fails the build on a violation.
 
