@@ -248,6 +248,34 @@ async function wireServiceWorker() {
       if (sw) sw.addEventListener('statechange', watch);
     });
     state.swRegistration = reg;
+
+    // Always ask whether the worker on the server is newer. A stale worker serves stale code
+    // from its cache, and a browser judges installability against what it is actually served.
+    reg.update().catch(() => { /* offline is fine; the cached worker still serves */ });
+
+    // In a browser tab no vault can exist, so there is nothing for an update to endanger and
+    // waiting only keeps a stale worker in charge of the one page where installing happens.
+    // Inside the installed app the waiting worker still needs explicit approval.
+    if (!isStandalone()) {
+      const takeOver = () => {
+        if (!reg.waiting) return;
+        reg.waiting.postMessage({ t: 'skip-waiting' });
+      };
+      takeOver();
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (sw) sw.addEventListener('statechange', takeOver);
+      });
+      // Reload only when a worker actually replaced another. The first worker to claim a page
+      // also fires controllerchange, and reloading there would jolt every new visitor.
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloaded) return;
+        reloaded = true;
+        location.reload();
+      });
+    }
   } catch (err) {
     // Without a service worker the browser will not install the app, so this cannot stay silent.
     state.swError = String((err && err.message) || err);

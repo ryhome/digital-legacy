@@ -31,6 +31,12 @@ async function collect() {
     add('Service worker', regs.length ? `${regs.length} registered` : 'none registered', regs.length > 0);
     add('Controlled by worker', navigator.serviceWorker.controller ? YES : NO,
       !!navigator.serviceWorker.controller);
+    const reg = regs[0];
+    if (reg) {
+      add('Worker state', ['installing', 'waiting', 'active'].filter((k) => reg[k]).join(', ') || 'none',
+        !!reg.active);
+      add('Newer worker held back', reg.waiting ? YES : NO, !reg.waiting);
+    }
   } else {
     add('Service worker', 'unavailable (needs https)', false);
   }
