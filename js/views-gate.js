@@ -10,6 +10,22 @@ import {
 
 const foot = () => h('p.t-caption', { style: { textAlign: 'center' } }, t('install.foot'));
 
+/**
+ * A browser will not offer to install a site whose manifest icons it cannot load, and the only
+ * symptom is a button that never becomes available. fetch() is blocked by connect-src 'none',
+ * but img-src 'self' is not, so the gate checks the two icons installability actually requires.
+ */
+const REQUIRED_ICONS = ['./icons/icon-192.png', './icons/icon-512.png'];
+
+function iconsPresent() {
+  return Promise.all(REQUIRED_ICONS.map((src) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth > 0);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  }))).then((r) => r.every(Boolean));
+}
+
 function stepList(items) {
   return h('div.stack',
     items.map((s, i) => h('div.card.row', { style: { alignItems: 'flex-start' } },
@@ -30,6 +46,26 @@ export function installView() {
   const body = h('div.screen.stack-lg');
 
   body.append(caution(null, t('install.strip')));
+
+  const health = h('div');
+  body.append(health);
+  if (!window.isSecureContext) {
+    health.append(irreversible(t('install.insecure.t'), t('install.insecure.b')));
+  }
+  if (state.swError) {
+    health.append(irreversible(t('install.swfailed.t'),
+      h('span', t('install.swfailed.b')),
+      h('pre.mo', { style: { fontSize: '12px', whiteSpace: 'pre-wrap', marginTop: '8px' } },
+        state.swError)));
+  }
+  if (state.iconsOk === false) {
+    health.append(irreversible(t('install.noicons.t'), t('install.noicons.b')));
+  } else if (state.iconsOk === undefined) {
+    iconsPresent().then((ok) => {
+      state.iconsOk = ok;
+      if (!ok && state.route === 'install') render();
+    });
+  }
 
   if (state.browserVaultSeen) {
     body.append(irreversible(t('twocopies.title'), t('twocopies.body')), h('p.t-small', t('twocopies.how')));
@@ -70,6 +106,7 @@ export function installView() {
       h('h1.t-display', t('install.title')),
       h('p.t-body', t('install.android.body')),
       install,
+      state.installPrompt ? null : h('p.t-caption', t('install.waiting')),
       h('p.t-caption', { style: { textAlign: 'center' } }, t('install.android.fallback')),
       stepList([
         { t: t('install.android.s1.t'), b: t('install.android.s1.b') },
@@ -106,6 +143,7 @@ export function installView() {
 export function bootView() {
   const rows = [
     { key: 'standalone', label: t('boot.c.standalone'), state: 'done', value: t('boot.yes') },
+    { key: 'secure', label: t('boot.c.secure'), state: 'wait', value: '' },
     { key: 'selftest', label: t('boot.c.selftest'), state: 'wait', value: '' },
     { key: 'storage', label: t('boot.c.storage'), state: 'busy', value: '' },
     { key: 'persist', label: t('boot.c.persist'), state: 'wait', value: '' },
@@ -127,6 +165,9 @@ export function bootView() {
       r.state = st; if (value !== undefined) r.value = value;
       paint();
     };
+    if (!window.isSecureContext) { go('insecure'); return; }
+    step('secure', 'done', location.protocol.replace(':', ''));
+
     step('selftest', 'busy');
     try {
       const st = await keys.call({ t: 'selftest' });
@@ -176,6 +217,23 @@ export function bootView() {
     list,
     h('p.t-small', t('boot.explain')),
     h('p.t-caption.mo', { style: { textAlign: 'center' } }, `${APP_VERSION} · ${releaseShort()}`));
+}
+
+// ---------------------------------------------------------------- insecure origin
+
+export function insecureView() {
+  return h('div.screen.stack-lg',
+    h('h1.t-display', t('insecure.title')),
+    h('p.t-body', t('insecure.body')),
+    h('div.t-heading', t('insecure.what')),
+    h('ul.t-body', [1, 2, 3].map((n) => h('li', t('insecure.w' + n)))),
+    irreversible(null, t('insecure.fix')),
+    h('div.card.stack', { style: { gap: '6px' } },
+      h('div.t-caption', t('nostore.diag')),
+      h('pre.mo', { style: { fontSize: '12px', whiteSpace: 'pre-wrap', color: 'var(--ink-2)' } },
+        diagnostics())),
+    btn(t('common.checkagain'), { onclick: () => boot() }),
+    h('p.t-caption', t('nostore.noway')));
 }
 
 // ---------------------------------------------------------------- self-test failure

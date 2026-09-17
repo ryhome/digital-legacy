@@ -25,6 +25,8 @@ export const state = {
   diag: [],
   installPrompt: null,
   browserVaultSeen: false,
+  iconsOk: undefined,
+  swError: null,
 };
 
 const VIEWS = {};
@@ -246,7 +248,11 @@ async function wireServiceWorker() {
       if (sw) sw.addEventListener('statechange', watch);
     });
     state.swRegistration = reg;
-  } catch { /* the app works without it; it just will not be offline-installable */ }
+  } catch (err) {
+    // Without a service worker the browser will not install the app, so this cannot stay silent.
+    state.swError = String((err && err.message) || err);
+    if (state.route === 'install') render();
+  }
 }
 
 export async function checkForUpdate() {
@@ -309,14 +315,19 @@ export async function boot() {
     if (state.route === 'install') render();
   });
 
+  // Register before the gate, not after. A browser tab is the only place an install can ever
+  // happen, and a browser will not offer to install a site that has no service worker — it
+  // makes a bookmark shortcut instead. Registering here also means the app is already cached
+  // by the time someone installs it.
+  wireServiceWorker();
+
   if (!isStandalone()) {
     // The tab renders the install guide and nothing else — no vault, no genesis.
-    state.diag.push(`display-mode -> browser tab`);
+    state.diag.push('display-mode -> browser tab');
     go('install');
     return;
   }
 
-  wireServiceWorker();
   go('boot');
 }
 
@@ -324,6 +335,8 @@ export function diagnostics() {
   return [
     `display-mode -> ${isStandalone() ? 'standalone' : 'browser'}`,
     `platform -> ${platform()}`,
+    `secureContext -> ${window.isSecureContext} (${location.protocol})`,
+    `navigator.storage -> ${navigator.storage ? 'available' : 'unavailable'}`,
     `storage.persisted -> ${state.persisted}`,
     `version -> ${APP_VERSION} ${releaseShort()}`,
     ...state.diag,

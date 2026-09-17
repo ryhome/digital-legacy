@@ -11,6 +11,7 @@ registerViews({
   install: gate.installView,
   boot: gate.bootView,
   nostore: gate.noStorageView,
+  insecure: gate.insecureView,
   'selftest-failed': gate.selfTestFailedView,
   damaged: gate.damagedView,
   update: gate.updateView,
