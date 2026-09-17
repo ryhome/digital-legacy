@@ -47,6 +47,15 @@ export function installView() {
 
   body.append(caution(null, t('install.strip')));
 
+  body.append(h('div.row', { style: { gap: '14px', alignItems: 'center' } },
+    h('img.appmark', {
+      src: './icons/icon-192.png', width: 56, height: 56, alt: '',
+      onerror: () => { state.iconsOk = false; if (state.route === 'install') render(); },
+    }),
+    h('div',
+      h('div.t-heading', t('app.name')),
+      h('div.t-caption', t('app.origin')))));
+
   const health = h('div');
   body.append(health);
   if (!window.isSecureContext) {

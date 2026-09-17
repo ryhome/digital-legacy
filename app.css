@@ -475,3 +475,10 @@ body.route-print #print { display: block; overflow-x: auto; background: #FFFFFF;
   .plate { break-inside: avoid; }
   .plate tr { break-inside: avoid; }
 }
+
+/* The app's own mark on the install gate: visible proof the browser can load the icon it
+   needs in order to offer an install at all. */
+.appmark {
+  width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
+  background: var(--sunken); border: 1px solid var(--rule);
+}
