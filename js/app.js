@@ -241,7 +241,7 @@ async function wireServiceWorker() {
       // install, not an update — announcing it would tell someone their brand-new app is stale.
       if (reg.waiting && navigator.serviceWorker.controller) {
         state.swWaiting = reg.waiting;
-        if (state.route === 'home') render();
+        if (['home', 'vaults'].includes(state.route)) render();
       }
     };
     watch();
@@ -251,14 +251,22 @@ async function wireServiceWorker() {
     });
     state.swRegistration = reg;
 
+    // Is there anything for an update to endanger? A browser tab never holds a vault, and an
+    // installed app before setup holds none yet. Decided before asking for the update, so the
+    // answer is in hand by the time a new worker finishes installing. If storage cannot be
+    // read, assume a vault is there — the cautious answer costs one extra tap, not a vault.
+    const unguarded = !isStandalone()
+      || await db.allMeta().then((list) => list.length === 0, () => false);
+
     // Always ask whether the worker on the server is newer. A stale worker serves stale code
     // from its cache, and a browser judges installability against what it is actually served.
     reg.update().catch(() => { /* offline is fine; the cached worker still serves */ });
 
-    // In a browser tab no vault can exist, so there is nothing for an update to endanger and
-    // waiting only keeps a stale worker in charge of the one page where installing happens.
-    // Inside the installed app the waiting worker still needs explicit approval.
-    if (!isStandalone()) {
+    // With nothing to protect, waiting only keeps a stale worker in charge — of the one page
+    // where installing happens, or of a setup screen that has no way to show the update
+    // prompt. Once a vault exists the waiting worker needs explicit approval on the update
+    // screen, which the vault list and the picker both offer.
+    if (unguarded) {
       const takeOver = () => {
         if (!reg.waiting) return;
         reg.waiting.postMessage({ t: 'skip-waiting' });

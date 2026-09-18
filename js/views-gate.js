@@ -237,6 +237,9 @@ export function vaultsView() {
   return h('div.screen.stack-lg',
     h('h1.t-display', t('vaults.title')),
     h('p.t-body', t('vaults.body')),
+    state.swWaiting
+      ? caution(t('update.title'), h('button.btn--link', { type: 'button', onclick: () => go('update') }, t('update.approve')))
+      : null,
     h('div.list', { role: 'list' }, state.vaults.map((v, i) => {
       const created = t('vaults.created', { date: formatDate(v.createdAt || 0) });
       return h('button.entry', {
@@ -332,9 +335,10 @@ export function damagedView({ metaBad } = {}) {
 // ---------------------------------------------------------------- B5: update waiting
 
 export function updateView() {
+  const back = () => go(state.meta ? 'home' : 'vaults');   // reachable from the picker too
   if (!state.swWaiting) {
     return h('div.screen.stack-lg',
-      header(t('update.title'), () => go('home')),
+      header(t('update.title'), back),
       note(null, t('update.none')),
       h('div.card.stack', { style: { gap: '6px' } },
         h('div.t-caption', t('update.running')),
@@ -348,7 +352,7 @@ export function updateView() {
       h('div.row', h('span.t-small.grow', t('update.hash')), h('span.mo', releaseShort()))),
     caution(null, t('update.verify')),
     btn(t('update.approve'), { kind: 'primary', onclick: applyUpdate }),
-    btn(t('update.later'), { onclick: () => go('home') }),
+    btn(t('update.later'), { onclick: back }),
     h('p.t-caption', t('update.safe')));
 }
 
