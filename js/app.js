@@ -304,10 +304,27 @@ async function wireServiceWorker() {
   }
 }
 
+/**
+ * Ask the server for a newer worker and wait for the answer. update() resolves as soon as the
+ * new worker starts installing, not when it has finished precaching thirty files — reading
+ * reg.waiting at that moment says "nothing" while an update is in fact seconds away. So this
+ * waits for the installing worker to settle (or a bounded time), then reports what is waiting.
+ */
 export async function checkForUpdate() {
-  if (!state.swRegistration) return false;
-  await state.swRegistration.update();
-  return !!state.swRegistration.waiting;
+  const reg = state.swRegistration;
+  if (!reg) return false;
+  try { await reg.update(); } catch { /* offline: whatever is waiting is still the answer */ }
+  const sw = reg.installing;
+  if (sw) {
+    await new Promise((resolve) => {
+      const timer = setTimeout(resolve, 20000);
+      sw.addEventListener('statechange', () => {
+        if (sw.state !== 'installing') { clearTimeout(timer); resolve(); }
+      });
+    });
+  }
+  state.swWaiting = reg.waiting && navigator.serviceWorker.controller ? reg.waiting : null;
+  return !!state.swWaiting;
 }
 
 export function applyUpdate() {

@@ -425,7 +425,13 @@ export function settingsView() {
       btn(t('diag.open'), { class: 'btn--small', onclick: () => go('diag', { from: 'settings' }) }),
       btn(t('set.checkupdate'), {
         class: 'btn--small',
-        onclick: async () => { await checkForUpdate(); go('update'); },
+        onclick: async (e) => {
+          const b = e.currentTarget;
+          b.disabled = true;
+          b.textContent = t('set.checking');
+          await checkForUpdate();
+          go('update');
+        },
       })),
 
     h('div.t-step.t-danger', t('set.irreversible')),
