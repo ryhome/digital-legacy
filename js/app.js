@@ -171,7 +171,15 @@ function wireBackgrounding() {
     lock({ silent: true });
   };
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden || document.visibilityState === 'hidden') { leave(); return; }
+    if (document.hidden || document.visibilityState === 'hidden') {
+      // On Android a share sheet or file chooser covers the page and reports it hidden. The
+      // two screens that open one hold nothing decrypted, so there is nothing to blank — and
+      // blanking would detach the very element the result is about to be written into.
+      if (!state.shareInFlight) leave();
+      return;
+    }
+    // A cancelled chooser never reports back, so the flag is cleared on the way in.
+    state.shareInFlight = false;
     // Re-check the gate on the way back in: a PWA can be reopened in a tab.
     if (!isStandalone() && state.route !== 'install') go('install');
   });

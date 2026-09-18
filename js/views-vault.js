@@ -12,8 +12,8 @@ import { passphraseField } from './phrase-entry.js';
 import * as keys from './keys.js';
 import * as db from './db.js';
 import {
-  APP_VERSION, applyRelock, applyTheme, checkForUpdate, go, loadVault, lock, markBackedUp,
-  openVault, releaseShort, render, state, unsavedCount,
+  APP_VERSION, applyRelock, applyTheme, checkForUpdate, go, isDesktop, loadVault, lock,
+  markBackedUp, openVault, releaseShort, render, state, unsavedCount,
 } from './app.js';
 import { BUCKETS, fromB64, hex, randomBytes, toB64 } from './codec.js';
 import { sealEntry } from './vault.js';
@@ -181,7 +181,10 @@ export function backupView({ first } = {}) {
   const name = backupFilename(state.meta.fingerprint);
   const bytes = new TextEncoder().encode(json);
   const file = new File([bytes], name, { type: 'application/json' });
-  const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  // A desktop share sheet (macOS above all) offers Mail and AirDrop and no way to save a file,
+  // so a desktop always downloads. A phone shares first and keeps Download as the way out
+  // when a share target fails.
+  const canShare = !isDesktop() && !!(navigator.canShare && navigator.canShare({ files: [file] }));
   const status = h('div', { hidden: true });
 
   const done = async () => {
@@ -191,10 +194,10 @@ export function backupView({ first } = {}) {
     announce(t('backup.saved'));
   };
 
-  const save = async () => {
+  const save = async (viaShare) => {
     state.shareInFlight = true;     // a share sheet or save dialog must not trigger blanking
     try {
-      if (canShare) {
+      if (viaShare) {
         await navigator.share({ files: [file], title: name });
       } else {
         const url = URL.createObjectURL(file);
@@ -227,7 +230,8 @@ export function backupView({ first } = {}) {
     h('p.t-small', t('backup.fpname')),
     caution(null, t('backup.where')),
     status,
-    btn(canShare ? t('backup.share') : t('backup.download'), { kind: 'primary', onclick: save }),
+    btn(canShare ? t('backup.share') : t('backup.download'), { kind: 'primary', onclick: () => save(canShare) }),
+    canShare ? btn(t('backup.download'), { onclick: () => save(false) }) : null,
     h('p.t-caption', t('backup.sharenote')));
 }
 

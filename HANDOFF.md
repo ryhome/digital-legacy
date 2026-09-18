@@ -49,7 +49,7 @@ hybrid, Argon2id from a BIP39 phrase, all inside a Worker that is terminated on 
 `js/strings.js` holds every string in `en` and `th`; `tools/check-strings.mjs` enforces parity.
 Refuses to run in a browser tab (install gate) or over plain http.
 
-## State as of 2026-09-17 (release `86dcffdd`)
+## State as of 2026-09-18 (release `68ce7576`)
 
 Done this session, in order:
 
@@ -68,6 +68,17 @@ Done this session, in order:
    one vault (`db.removeVault`), not the database. Restoring a file for an unknown
    fingerprint adds it as a new vault; `restore.other.*` strings deleted as dead.
    `putEntry`/`putEntries`/`replaceAll` stamp `vaultId` themselves so no caller can forget.
+
+4. **Updates reach a vault-less install.** The update prompt only rendered on the vault list,
+   so an installed app still on "Before you begin" could never learn of a new release.
+   `wireServiceWorker` now auto-adopts when storage holds no vault (same rule as a browser
+   tab: nothing to protect); the picker shows the prompt; the update screen returns to
+   `home` or `vaults` as appropriate. Devices on builds *before* this need one manual
+   clear of site data (only if they hold no vault!) to get onto it.
+5. **Backup on desktop downloads.** `canShare` was true on macOS Chrome/Safari, whose share
+   sheet has no save target. Desktop now always downloads; phones share with Download as a
+   fallback button. `visibilitychange` honours `shareInFlight` (an Android chooser reports
+   the page hidden) and clears it on return.
 
 Design choice to revisit if it annoys: with exactly **one** vault the picker still shows on
 every launch (that is what was asked for). Skipping it in that case is a two-line change in
