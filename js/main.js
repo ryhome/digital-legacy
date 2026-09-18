@@ -28,6 +28,7 @@ registerViews({
   'genesis-create': genesis.genesisCreateView,
   'genesis-done': genesis.genesisDoneView,
   print: genesis.printView,
+  'print-heir': genesis.heirView,
 
   home: vault.homeView,
   write: vault.writeView,

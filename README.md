@@ -105,13 +105,22 @@ minutes, as often as needed, for as long as the screen stays open — scrolling 
 nothing. The moment the app leaves the foreground, the decrypted text is **removed from the page**
 and the key is destroyed.
 
-### The printed plate template
+### The two pages it prints
 
-![Plate template](docs/screenshots/plate.png)
+| For punching a metal plate | For whoever is given the words |
+|---|---|
+| ![Plate template](docs/screenshots/plate.png) | ![Sheet for the heir](docs/screenshots/heir.png) |
 
-The one page this app prints: an A4/Letter sheet for punching a metal plate. Black on white, no
-colour carrying meaning, and the punched squares are drawn as vector fills rather than background
-colour so a printer set to skip backgrounds still produces a correct plate.
+The plate template is an A4/Letter sheet for punching a metal plate. Black on white, no colour
+carrying meaning, and the punched squares are drawn as vector fills rather than background colour
+so a printer set to skip backgrounds still produces a correct plate.
+
+The sheet for the heir is the page nobody thinks to make: eight plain steps for a person who has
+never seen the app and is not having a good day — where the app is, that it must be the installed
+icon, which vault, what to type where, that the ten-second wait is normal, what to do if it will not
+open, and that there is nobody to call. It carries no secret, needs no phrase to print, and is meant
+to be kept *with* the words, so whoever finds them knows what they are for. Ruled lines at the
+bottom are for a note in your own hand.
 
 ### Backup, settings, guide
 

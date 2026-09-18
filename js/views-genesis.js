@@ -1,4 +1,4 @@
-// C: genesis, and C4 the printable TinySeed plate template.
+// C: genesis, C4 the printable TinySeed plate template, and the sheet for whoever gets the words.
 // The 24 words exist in this module's memory between generation and verification, and nowhere
 // else. They are dropped the moment the vault is written, or the moment the user leaves.
 
@@ -350,6 +350,7 @@ export function genesisDoneView() {
     btn(t('done.backup'), { kind: 'primary', onclick: () => { clearGenesis(); go('backup', { first: true }); } }),
     btn(t('done.print'), { onclick: () => go('print', { from: 'done' }) }),
     h('p.t-caption', t('done.print.note')),
+    btn(t('done.heir'), { onclick: () => go('print-heir', { from: 'done' }) }),
     btn(t('done.skip'), { kind: 'quiet', onclick: () => { clearGenesis(); go('home'); } }),
     h('p.t-caption', t('done.skip.note')));
 }
@@ -467,6 +468,49 @@ export function printView({ from } = {}) {
     caution(null, t('phrase.screenshot')),
     irreversible(null, t('print.burn')),
     note(null, t('print.nopass')),
+    h('p.t-small', t('print.preview')),
+    btn(t('print.go'), { kind: 'primary', onclick: () => window.print() }));
+}
+
+// ---------------------------------------------------------------- the sheet for the heir
+
+/**
+ * The other page this app prints. It carries no secret — no words, no passphrase — only what
+ * to do with them, written for someone who has never seen the app and is not having a good
+ * day. Meant to be kept with the words, so whoever finds them knows what they are for.
+ */
+function heirSheet(fp) {
+  const step = (n) => h('li', h('strong', t(`heir.s${n}.t`)), t(`heir.s${n}.b`));
+  return h('section.sheet',
+    h('header.sheet__head',
+      h('div',
+        h('h1.sheet__title', t('heir.title')),
+        h('div.sheet__sub', t('heir.sub'))),
+      h('div.sheet__fields',
+        h('div.sheet__field',
+          h('span.sheet__flabel', t('print.vault')),
+          h('span.sheet__fval.sheet__fval--vault', fp || '\u00a0')),
+        h('div.sheet__field',
+          h('span.sheet__flabel', t('print.date')),
+          h('span.sheet__fval.sheet__fval--date', '\u00a0')))),
+    h('p.heir__lead', t('heir.lead')),
+    h('p.heir__lead', t('heir.language', { language: getLocale() === 'th' ? t('lang.th') : t('lang.en') })),
+    h('ol.heir__steps', [1, 2, 3, 4, 5, 6, 7, 8].map(step)),
+    h('div.heir__lines',
+      h('span.sheet__flabel', t('heir.from')),
+      [1, 2, 3, 4].map(() => h('div.heir__line'))),
+    h('footer.sheet__foot',
+      h('span', t('heir.keep')),
+      h('span', t('print.foot', { n: 1, total: 1 }))));
+}
+
+export function heirView({ from } = {}) {
+  const target = document.getElementById('print');
+  clear(target);
+  target.append(heirSheet((state.meta && state.meta.fingerprint) || (g && g.fp) || ''));
+  return h('div.screen.stack-lg',
+    header(t('heir.title'), () => go(from === 'done' ? 'genesis-done' : 'settings')),
+    note(null, t('heir.about')),
     h('p.t-small', t('print.preview')),
     btn(t('print.go'), { kind: 'primary', onclick: () => window.print() }));
 }

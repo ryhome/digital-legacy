@@ -99,10 +99,13 @@ export function go(route, params = {}) {
   render();
 }
 
+// The only two routes allowed to print, and the only two that ever fill #print.
+const PRINTABLE = ['print', 'print-heir'];
+
 export function render() {
   const view = VIEWS[state.route];
   document.body.className = 'route-' + state.route;
-  if (state.route !== 'print') clearPrintSheet();
+  if (!PRINTABLE.includes(state.route)) clearPrintSheet();
   clear(root);
   root.append(view ? view(state.params) : h('p', 'missing view: ' + state.route));
   root.scrollTop = 0;
@@ -228,7 +231,7 @@ function wireKeys() {
       if (state.session) { e.preventDefault(); lock(); }
       return;
     }
-    if ((e.metaKey || e.ctrlKey) && (e.key === 'p' || e.key === 'P') && state.route !== 'print') {
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'p' || e.key === 'P') && !PRINTABLE.includes(state.route)) {
       e.preventDefault();
       announce(t('print.blocked'));
       const bar = h('div.caution', h('div', t('print.blocked')));

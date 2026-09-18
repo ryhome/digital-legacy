@@ -407,6 +407,9 @@ export function settingsView() {
       h('div', h('div.t-heading', t('set.print')), h('p.t-caption', t('set.print.s'))),
       btn(t('set.print'), { class: 'btn--small', onclick: () => go('unlock', { then: 'print' }) })),
     h('div.card.stack',
+      h('div', h('div.t-heading', t('set.heir')), h('p.t-caption', t('set.heir.s'))),
+      btn(t('set.heir'), { class: 'btn--small', onclick: () => go('print-heir', { from: 'settings' }) })),
+    h('div.card.stack',
       h('div', h('div.t-heading', t('set.rekey')), h('p.t-caption', t('set.rekey.s'))),
       h('p.t-small', t('set.rekey.b')),
       btn(t('set.rekey'), {
