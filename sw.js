@@ -4,7 +4,7 @@
 // could in principle touch IndexedDB, so this buys availability, not integrity — the backup file
 // is the defence for that.
 
-const RELEASE = 'bfb9c7be5dfc20662bf97a444b560a1d2d5dd215d1cb0841a142005a1c0cd1de';
+const RELEASE = '37af15b039bd79dd87b3acba38108db8ce2b0963bc4ec0907d2c8687b507a6f5';
 const CACHE = `dm-${RELEASE}`;
 
 const ASSETS = [
@@ -41,7 +41,10 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+  // Each file is fetched under this release's query, a URL no CDN edge has seen before, with the
+  // browser's own HTTP cache bypassed too. Lookups ignore the search, so plain paths still hit.
+  e.waitUntil(caches.open(CACHE).then((c) =>
+    c.addAll(ASSETS.map((a) => new Request(`${a}?r=${RELEASE}`, { cache: 'reload' })))));
   // No skipWaiting here on purpose: the code that holds someone's messages does not change
   // without them saying so.
 });
@@ -60,6 +63,9 @@ self.addEventListener('message', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // The app imports version.js?probe=<now> to ask the server what the newest release is. That
+  // must not be answered from this worker's cache, which by definition knows only itself.
+  if (url.searchParams.has('probe')) return;
   e.respondWith((async () => {
     const hit = await caches.match(e.request, { ignoreSearch: true });
     if (hit) return hit;

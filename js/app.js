@@ -243,11 +243,21 @@ function wireKeys() {
 
 // ---------------------------------------------------------------- service worker
 
+// The worker is registered under its release's own URL. A CDN edge may hold ./sw.js for hours
+// after a release; ./sw.js?r=<new hash> is a URL it has never seen, so a new release is always
+// fetched from the origin. The same release keeps the same URL, so nothing churns.
+const SW_OPTS = { scope: './', updateViaCache: 'none' };
+const swUrl = (release) => `./sw.js?r=${release}`;
+const sameRelease = (w) => new URL(w.scriptURL).searchParams.get('r') === RELEASE_HASH;
+
 async function wireServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const reg = await navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' });
+    const reg = await navigator.serviceWorker.register(swUrl(RELEASE_HASH), SW_OPTS);
     const watch = () => {
+      // Installs that were registered as plain ./sw.js re-register once under this release's
+      // URL. That worker is this same code, so it is adopted without a prompt.
+      if (reg.waiting && sameRelease(reg.waiting)) { reg.waiting.postMessage({ t: 'skip-waiting' }); return; }
       // A worker only "waits" behind an existing one. With no controller this is the first
       // install, not an update — announcing it would tell someone their brand-new app is stale.
       if (reg.waiting && navigator.serviceWorker.controller) {
@@ -313,7 +323,13 @@ async function wireServiceWorker() {
 export async function checkForUpdate() {
   const reg = state.swRegistration;
   if (!reg) return false;
-  try { await reg.update(); } catch { /* offline: whatever is waiting is still the answer */ }
+  try {
+    // version.js?probe=<now> is a URL no cache has seen, so the hash it carries is the server's.
+    // The worker lets probes through; the CSP allows same-origin scripts, which an import is.
+    const fresh = (await import(`./version.js?probe=${Date.now()}`)).RELEASE_HASH;
+    if (fresh !== RELEASE_HASH) await navigator.serviceWorker.register(swUrl(fresh), SW_OPTS);
+    else await reg.update();
+  } catch { /* offline: whatever is waiting is still the answer */ }
   const sw = reg.installing;
   if (sw) {
     await new Promise((resolve) => {
@@ -323,7 +339,7 @@ export async function checkForUpdate() {
       });
     });
   }
-  state.swWaiting = reg.waiting && navigator.serviceWorker.controller ? reg.waiting : null;
+  state.swWaiting = reg.waiting && !sameRelease(reg.waiting) && navigator.serviceWorker.controller ? reg.waiting : null;
   return !!state.swWaiting;
 }
 
