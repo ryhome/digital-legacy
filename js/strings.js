@@ -399,7 +399,7 @@ export const en = {
   "read.sub.one": "One message. Nothing here leaves this screen.",
   "read.relock": "Locks again in {time}",
   "read.locknow": "Lock now",
-  "read.extend": "Give me two more minutes",
+  "read.extend": "Snooze — two more minutes",
   "read.nolabel": "No label",
   "read.when": "{date} · entry {n}",
   "read.tapread": "Tap to read — {size}, longer than the others.",

@@ -172,19 +172,20 @@ export function readView() {
   const pill = h('div.relock', { role: 'status' },
     h('span.relock__t', t('read.relock', { time: '' })), clock,
     h('button.relock__btn', { type: 'button', onclick: () => lock() }, t('read.locknow')));
-  const extend = h('button.relock__btn', { type: 'button', hidden: true, onclick: () => extendRelock(120) },
+  // Snooze: two more minutes per tap, as often as wanted, for as long as the screen stays open.
+  // Backgrounding still locks at once; only the clock is negotiable, never the wipe.
+  const extend = h('button.relock__btn', { type: 'button', onclick: () => extendRelock(120) },
     t('read.extend'));
   pill.append(extend);
 
   if (state.prefs.relock === 0) {
     clock.textContent = '—';
     pill.firstChild.textContent = t('set.relock.manual');
+    extend.hidden = true;
   } else {
     const paintClock = (left) => {
       clock.textContent = formatClock(left);
-      const soon = left <= 20;
-      pill.classList.toggle('relock--soon', soon);
-      extend.hidden = !soon;
+      pill.classList.toggle('relock--soon', left <= 20);
     };
     paintClock(Math.ceil((state.session.expiresAt - Date.now()) / 1000));
     startRelockTimer(paintClock);

@@ -49,7 +49,7 @@ hybrid, Argon2id from a BIP39 phrase, all inside a Worker that is terminated on 
 `js/strings.js` holds every string in `en` and `th`; `tools/check-strings.mjs` enforces parity.
 Refuses to run in a browser tab (install gate) or over plain http.
 
-## State as of 2026-09-18 (release `68ce7576`)
+## State as of 2026-09-18 (release `b4523a41`)
 
 Done this session, in order:
 
@@ -79,6 +79,9 @@ Done this session, in order:
    sheet has no save target. Desktop now always downloads; phones share with Download as a
    fallback button. `visibilitychange` honours `shareInFlight` (an Android chooser reports
    the page hidden) and clears it on return.
+6. **Snooze while reading.** The read screen's "+2 min" button existed but only appeared in
+   the last 20 s. It is now always visible (hidden only in manual-relock mode), labelled
+   Snooze, repeatable without limit. Backgrounding still locks immediately.
 
 Design choice to revisit if it annoys: with exactly **one** vault the picker still shows on
 every launch (that is what was asked for). Skipping it in that case is a two-line change in
