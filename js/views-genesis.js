@@ -295,10 +295,11 @@ export function genesisVerifyView() {
     h('div.t-step', t('verify.step')),
     h('h1.t-display', t('verify.title')),
     h('p.t-body', t('verify.body')),
-    err,
     entry,
     h('p.t-small', t('verify.checksumnote')),
-    h('div.pin-bottom', counter, submit,
+    // The error lives in the pinned block, next to the button that produced it. Above the
+    // twenty-four fields it was off-screen on a phone and the tap looked like it did nothing.
+    h('div.pin-bottom', err, counter, submit,
       btn(t('verify.showagain'), { kind: 'quiet', onclick: () => { g.page = 0; go('genesis-phrase'); } })));
 }
 
