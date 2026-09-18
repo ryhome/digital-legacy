@@ -31,6 +31,9 @@ dignified, slow, and honest about what it cannot do.
 - **No trigger.** It cannot know you have died. Someone has to be given the words.
 - **Two secrets, if you want them.** An optional passphrase lets you give the words to one person
   and the passphrase to another, so neither can read anything alone.
+- **Up to three vaults on one device**, each with its own twenty-four words and its own messages —
+  one for a partner, one for the executor, one for whoever it turns out to be. A vault can carry a
+  nickname, which stays on the device and is never written into a backup.
 - **English and Thai**, light and dark, offline for as long as the device keeps working.
 
 It is deliberately boring, and built to outlast whoever made it.
@@ -75,6 +78,17 @@ created until you have proved the words left the screen and reached paper or met
 The everyday state shows a count, an order and a rough size. No previews, because there is nothing
 to preview — the app genuinely cannot read what is there. Writing asks for nothing.
 
+### More than one vault
+
+| The picker | Naming one |
+|---|---|
+| ![Vault picker](docs/screenshots/17-vaults.png) | ![Settings, with a nickname](docs/screenshots/15-settings.png) |
+
+A device with any vault on it boots into this screen. Each row is a vault — nickname if it has one,
+fingerprint always, the day it was made. Below: create another, or import one from a backup file.
+Both go quiet at three. A vault's nickname is set in its Settings and lives only on that device: the
+backup file must not say what a vault is for, so it does not carry the name.
+
 ### Reading
 
 | Type the words | Or tap a metal plate |
@@ -86,8 +100,10 @@ to preview — the app genuinely cannot read what is there. Writing asks for not
 | ![Read view](docs/screenshots/12-read.png) | ![Backgrounded](docs/screenshots/13-backgrounded.png) |
 
 Three input modes, one validator: type them, tap the punched squares off a TinySeed plate, or enter
-the numbers. The moment the app leaves the foreground, the decrypted text is **removed from the
-page** and the key is destroyed.
+the numbers. A visible clock counts down from the moment the vault opens; **Snooze** buys two more
+minutes, as often as needed, for as long as the screen stays open — scrolling and tapping buy
+nothing. The moment the app leaves the foreground, the decrypted text is **removed from the page**
+and the key is destroyed.
 
 ### The printed plate template
 
@@ -170,7 +186,8 @@ Plaintext is framed and zero-padded to a 1 KB, 4 KB or 16 KB bucket, so cipherte
 only the bucket. Exact timestamps are inside the sealed payload; only day granularity is stored in
 clear. An attacker with the device or a backup file learns how many messages exist, roughly how long
 they are, and which days they were written. Nothing else — not a recipient, not a subject, not a
-word.
+word. A vault's nickname is deliberately left out of the backup file for the same reason; it exists
+only in the device's own storage.
 
 ### Where secrets live, and how they stop living
 
@@ -184,8 +201,13 @@ Zeroing is still done everywhere, as belt.
 
 Locking happens on `visibilitychange`, on `pagehide`, on Escape from anywhere, on desktop window
 blur, and on a visible countdown that starts when the vault opens and is not extended by scrolling
-or tapping. Backgrounding also empties the DOM — the content is removed, not blurred or covered,
-so it cannot appear in a task-switcher thumbnail.
+or tapping — only by a deliberate Snooze. Backgrounding also empties the DOM — the content is
+removed, not blurred or covered, so it cannot appear in a task-switcher thumbnail. The one
+exception: while the backup or restore screen has a share sheet or file chooser open, which Android
+reports as the page going hidden, blanking is held off — those two screens hold nothing decrypted.
+
+Setup is treated the same way. Backgrounding while the twenty-four words are on screen wipes them
+and starts the phrase again; the acknowledgements already ticked survive, and the screen says why.
 
 Phrase fields are never `<input type="password">`: a password field makes the browser and every
 password manager offer to remember the phrase, which is precisely what must not happen. They carry
@@ -199,8 +221,9 @@ no name and have autocomplete, autocorrect, autocapitalise and spellcheck off.
 - Every dependency vendored, pinned and committed unminified so it stays auditable. No CDN, no WASM.
 - No `innerHTML`, no `eval`, no template strings of markup anywhere — the DOM is built node by node
   with `textContent`, so there is nothing for an injection to ride in on.
-- A service worker that caches offline but **never activates a new version on its own**. An update
-  waits until someone approves it, on a screen showing both release hashes.
+- A service worker that caches offline but **never activates a new version on its own while a vault
+  exists**. An update waits until someone approves it, on a screen showing both release hashes. With
+  no vault on the device there is nothing to protect, and a newer worker is adopted at once.
 - `node tools/build.mjs` publishes a SHA-256 per file and one release hash, which the app shows in
   Settings so it can be compared against what is published. The manifest verifies with stock tools:
   `grep -v '^release ' SHA256SUMS | shasum -a 256 -c`
@@ -230,7 +253,7 @@ js/
   keyworker.js          the only place private keys exist
   keys.js               main-thread handle on that worker; terminate() is the wipe
   codec.js              zeroing, constant-time compare, base64, AAD, padded plaintext frame
-  db.js                 IndexedDB "dm" v1
+  db.js                 IndexedDB "dm" v2 — up to three vaults, every entry stamped with its vault
   i18n.js, strings.js   EN + TH catalogues, Buddhist-era dates, Arabic digits everywhere
   dom.js, ui.js         textContent-only DOM building; the component library
   phrase-entry.js       three input modes, one validator
