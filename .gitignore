@@ -17,3 +17,6 @@ plate-*.pdf
 #   SHA256SUMS             published with each release, and compared against in Settings
 #   docs/screenshots/      the README shows the real app, not mockups
 #   tools/package-lock.json  pins the exact dependency versions
+
+# Operations notes for whoever picks this up locally. Not for the public repo.
+HANDOFF.md
