@@ -280,7 +280,13 @@ node tools/test.mjs           # crypto round trip, AAD tampering, padding bucket
 node tools/plate-preview.mjs  # renders the plate sheet, fails if it does not fit one page
 node tools/e2e.mjs            # genesis -> write -> unlock -> read -> backup -> restore, in Chrome
 node tools/screenshots.mjs    # regenerates docs/screenshots from the running app
+
+tools/release.sh 1.0.1 msg.txt   # bump js/version.js, run check.sh, publish to main, tag v1.0.1
 ```
+
+Every push to `main` is a release: the version in `js/version.js` is bumped, the commit is tagged
+`v<version>`, and the tag message carries the release hash from `SHA256SUMS` — the same hash the
+app shows in Settings — so a device can be matched to the exact tag it is running.
 
 Pinned: `@scure/bip39@2.4.0`, `@noble/hashes@2.4.0`, `@noble/curves@2.4.0`,
 `@noble/post-quantum@0.7.1`.
