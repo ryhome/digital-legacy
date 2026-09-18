@@ -242,14 +242,16 @@ export function vaultsView() {
       : null,
     h('div.list', { role: 'list' }, state.vaults.map((v, i) => {
       const created = t('vaults.created', { date: formatDate(v.createdAt || 0) });
+      const meta = [v.name ? v.fingerprint : null, created, v.id === current ? t('vaults.current') : null]
+        .filter(Boolean).join(' · ');
       return h('button.entry', {
         type: 'button', onclick: () => openVault(v.id),
-        'aria-label': t('vaults.open', { fp: v.fingerprint }),
+        'aria-label': t('vaults.open', { fp: v.name || v.fingerprint }),
       },
       h('span.entry__n', String(i + 1)),
       h('div.grow',
-        h('div.mo', { style: { fontSize: '17px' } }, v.fingerprint),
-        h('div.entry__meta', v.id === current ? `${created} · ${t('vaults.current')}` : created)));
+        h('div' + (v.name ? '' : '.mo'), { style: { fontSize: '17px' } }, v.name || v.fingerprint),
+        h('div.entry__meta' + (v.name ? '.mo' : ''), meta)));
     })),
     h('div.pin-bottom',
       btn(t('vaults.create'), { kind: 'primary', disabled: full, onclick: () => go('genesis') }),

@@ -34,6 +34,7 @@ export function homeView() {
     h('div.row',
       h('div.grow',
         h('h1.t-title', t('app.name')),
+        meta && meta.name ? h('div.t-caption', meta.name) : null,
         h('div.mo.t-caption', meta ? meta.fingerprint : '')),
       h('span.t-caption', state.persisted ? t('home.persisted') : t('home.notpersisted'))),
 
@@ -389,6 +390,19 @@ export function settingsView() {
     h('div.card.stack', { style: { gap: '6px' } },
       h('div.t-caption', t('set.fp')),
       h('div.fp', meta ? meta.fingerprint : '')),
+    h('div.card.stack',
+      h('div', h('div.t-heading', t('set.name')), h('p.t-caption', t('set.name.s'))),
+      h('input.input', {
+        type: 'text', value: (meta && meta.name) || '', maxlength: 40,
+        autocomplete: 'off', name: '', 'aria-label': t('set.name'),
+        // Saved on change, not on every keystroke: one write per edit, no save button to find.
+        onchange: async (e) => {
+          const name = e.target.value.trim().slice(0, 40);
+          state.meta = { ...state.meta, name: name || undefined };
+          await db.putMeta(state.meta);
+          await loadVault();
+        },
+      })),
     h('div.card.stack',
       h('div', h('div.t-heading', t('set.print')), h('p.t-caption', t('set.print.s'))),
       btn(t('set.print'), { class: 'btn--small', onclick: () => go('unlock', { then: 'print' }) })),
