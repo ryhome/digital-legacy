@@ -1,6 +1,6 @@
 // A: install gate. B: boot states. The vault picker. Language confirmation.
 
-import { h } from './dom.js';
+import { append, h } from './dom.js';
 import { t, getLocale, setLocale, detected, formatDate } from './i18n.js';
 import { btn, card, caution, header, irreversible, note, steps } from './ui.js';
 import {
@@ -45,9 +45,9 @@ export function installView() {
   const p = state.params.force || platform();
   const body = h('div.screen.stack-lg');
 
-  body.append(caution(null, t('install.strip')));
+  append(body, caution(null, t('install.strip')));
 
-  body.append(h('div.row', { style: { gap: '14px', alignItems: 'center' } },
+  append(body, h('div.row', { style: { gap: '14px', alignItems: 'center' } },
     h('img.appmark', {
       src: './icons/icon-192.png', width: 56, height: 56, alt: '',
       onerror: () => { state.iconsOk = false; if (state.route === 'install') render(); },
@@ -57,7 +57,7 @@ export function installView() {
       h('div.t-caption', t('app.origin')))));
 
   const health = h('div');
-  body.append(health);
+  append(body, health);
   if (!window.isSecureContext) {
     health.append(irreversible(t('install.insecure.t'), t('install.insecure.b')));
   }
@@ -77,11 +77,11 @@ export function installView() {
   }
 
   if (state.browserVaultSeen) {
-    body.append(irreversible(t('twocopies.title'), t('twocopies.body')), h('p.t-small', t('twocopies.how')));
+    append(body, irreversible(t('twocopies.title'), t('twocopies.body')), h('p.t-small', t('twocopies.how')));
   }
 
   if (p === 'ios') {
-    body.append(
+    append(body, 
       h('h1.t-display', t('install.title')),
       h('p.t-body', t('install.ios.body')),
       note(null, t('install.ios.safarionly')),
@@ -91,7 +91,7 @@ export function installView() {
         { t: t('install.ios.s3.t'), b: t('install.ios.s3.b') },
       ]));
   } else if (p === 'ios-other') {
-    body.append(
+    append(body, 
       h('h1.t-display', t('install.eu.title')),
       h('p.t-body', t('install.eu.body')),
       card('caution', t('install.eu.tell.t'), t('install.eu.tell.b')),
@@ -111,7 +111,7 @@ export function installView() {
         render();
       },
     });
-    body.append(
+    append(body, 
       h('h1.t-display', t('install.title')),
       h('p.t-body', t('install.android.body')),
       install,
@@ -124,7 +124,7 @@ export function installView() {
       ]),
       caution(null, t('install.android.shortcut')));
   } else {
-    body.append(
+    append(body, 
       h('h1.t-display', t('install.title')),
       h('p.t-body', t('install.desktop.body')),
       stepList([
@@ -136,7 +136,7 @@ export function installView() {
       caution(t('install.desktop.safari.t'), t('install.desktop.safari.b')));
   }
 
-  body.append(alreadyInstalled(),
+  append(body, alreadyInstalled(),
     btn(t('diag.open'), { kind: 'quiet', onclick: () => go('diag', { from: 'install' }) }),
     foot());
 

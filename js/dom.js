@@ -52,6 +52,13 @@ export function svg(d, { size = 20, stroke = 'currentColor', width = 1.6, fill =
   return s;
 }
 
+/**
+ * Append with h()'s child rules — null, undefined and false are skipped, arrays flattened.
+ * The native Element.append() turns a null into the text "null", which is how a conditional
+ * child once printed the word under the install button.
+ */
+export function append(el, ...kids) { add(el, kids); return el; }
+
 export function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 
 /** Announce to screen readers without moving focus. */
