@@ -199,7 +199,7 @@ export const en = {
   "vaults.n": "{n} vaults",
   "vaults.n.one": "one vault",
   "vaults.back": "Back to your vaults",
-  "genesis.warn.restarted": "Setup started over. The app left the foreground, so the 24 words were wiped from memory rather than left sitting behind the task switcher. Nothing was created and nothing was saved. What you had already marked is still marked.",
+  "genesis.warn.restarted": "Setup started over. The app sat in the background for more than ten minutes, so the 24 words were wiped from memory — a phrase does not wait around indefinitely. Nothing was created and nothing was saved. What you had already marked is still marked.",
 
   // ---- genesis C2 passphrase
   "pass.step": "Step 1 of 4",
@@ -693,7 +693,7 @@ export const th = {
   "vaults.n": "{n} แห่ง",
   "vaults.n.one": "1 แห่ง",
   "vaults.back": "กลับไปหน้าที่เก็บของคุณ",
-  "genesis.warn.restarted": "การตั้งค่าเริ่มใหม่ เนื่องจากแอปออกจากหน้าจอ คำทั้ง 24 คำจึงถูกลบออกจากหน่วยความจำ แทนที่จะค้างไว้หลังหน้าสลับแอป ไม่มีสิ่งใดถูกสร้างหรือถูกบันทึก ข้อที่คุณยืนยันไว้แล้วยังคงอยู่",
+  "genesis.warn.restarted": "การตั้งค่าเริ่มใหม่ เนื่องจากแอปอยู่เบื้องหลังนานเกินสิบนาที คำทั้ง 24 คำจึงถูกลบออกจากหน่วยความจำ ชุดคำจะไม่รอค้างไว้ไม่มีกำหนด ไม่มีสิ่งใดถูกสร้างหรือถูกบันทึก ข้อที่คุณยืนยันไว้แล้วยังคงอยู่",
 
   "pass.title": "วลีรหัสผ่าน หรือไม่ใช้",
   "pass.thai": "หากใช้ภาษาไทยเป็นวลีรหัสผ่าน ลำดับการพิมพ์สระและวรรณยุกต์มีผลต่อรหัสผ่าน แม้ตัวอักษรจะดูเหมือนกันทุกประการ",

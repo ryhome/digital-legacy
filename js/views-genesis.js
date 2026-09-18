@@ -1,6 +1,7 @@
 // C: genesis, C4 the printable TinySeed plate template, and the sheet for whoever gets the words.
 // The 24 words exist in this module's memory between generation and verification, and nowhere
-// else. They are dropped the moment the vault is written, or the moment the user leaves.
+// else. They are dropped the moment the vault is written, or after setup has sat in the
+// background for longer than SUSPEND_LIMIT.
 
 import { clear, h, svg } from './dom.js';
 import { getLocale, t } from './i18n.js';
@@ -19,11 +20,27 @@ import { heldWords, hold, release } from './held.js';
 let g = null;
 
 /**
- * Backgrounding during setup wipes the phrase: 24 words must never sit in memory behind a task
- * switcher, and that part is not negotiable. But the five acknowledgements and the passphrase
- * choice are not secrets, and discarding those too punished someone for glancing at another
- * app — they survive, so coming back costs a tap instead of the whole screen.
+ * Backgrounding during setup. The screen is already emptied by the blanking in app.js, so a task
+ * switcher sees nothing; the only question is whether the phrase survives in memory. A phone
+ * call or a glance at another app must not cost twenty-four words half written down, so it does
+ * — for a bounded time. Longer than that and the phrase is wiped and setup starts over, with the
+ * screen saying why. The acknowledgements and the passphrase choice are not secrets and always
+ * survive. `at` exists for the test that exercises the limit.
  */
+const SUSPEND_LIMIT = 10 * 60 * 1000;
+let suspendedAt = 0;
+
+export function suspendGenesis(at = Date.now()) {
+  if (g) suspendedAt = at;
+}
+
+/** Wraps a genesis view: applies the limit on the way back in, then renders as normal. */
+export const guard = (view) => (params) => {
+  if (suspendedAt && Date.now() - suspendedAt > SUSPEND_LIMIT) resetGenesis();
+  suspendedAt = 0;
+  return view(params);
+};
+
 export function resetGenesis() {
   if (!g) return;
   const lost = !!g.words;          // true only past C3: a phrase existed, and it is gone now
@@ -63,11 +80,19 @@ const passphrase = () =>
 
 export function genesisView() {
   if (!g) g = fresh();
-  const marked = g.acks.filter(Boolean).length;
   const create = btn(t('genesis.warn.create'), {
-    kind: 'primary', disabled: marked < 5,
+    kind: 'primary',
     onclick: () => { g.interrupted = false; go('genesis-pass'); },
   });
+  const count = h('p.t-caption', { style: { textAlign: 'center' } });
+  // Ticking a box changes two things on this screen. A full render() would rebuild the page
+  // and scroll it to the top, which on a phone throws the reader away from the box they ticked.
+  const repaint = () => {
+    const marked = g.acks.filter(Boolean).length;
+    count.textContent = t('genesis.warn.count', { n: marked, total: 5 });
+    create.disabled = marked < 5;
+  };
+  repaint();
   return h('div.screen.stack-lg',
     h('h1.t-display', t('genesis.warn.title')),
     h('p.t-body', t('genesis.warn.sub')),
@@ -76,11 +101,10 @@ export function genesisView() {
     h('div.stack', [1, 2, 3, 4, 5].map((n) => ack({
       title: t(`genesis.w${n}.t`), body: t(`genesis.w${n}.b`),
       grave: n === 1, checked: g.acks[n - 1],
-      onchange: (v) => { g.acks[n - 1] = v; render(); },
+      onchange: (v) => { g.acks[n - 1] = v; repaint(); },
     }))),
     h('div.pin-bottom',
-      h('p.t-caption', { style: { textAlign: 'center' } },
-        t('genesis.warn.count', { n: marked, total: 5 })),
+      count,
       create,
       btn(t('genesis.warn.guidefirst'), { kind: 'quiet', onclick: () => go('guide', { from: 'genesis' }) }),
       // A vault that already exists elsewhere is adopted, not made again. restoreView already
@@ -301,16 +325,21 @@ export function genesisCreateView() {
     }
 
     const id = hex(randomBytes(8));
-    await db.putMeta({
-      id, v: 1, createdAt: Date.now(),
-      pkC: res.pkC, pkPq: res.pkPq,
-      fingerprint: res.fingerprint,
-      kdf: res.kdf, norm: 'NFKD',
-      hasPassphrase: g.verify.passphrase.length > 0,
-      lastBackupAt: null, backedUpSeq: 0,
-    });
-    await db.persist();
-    await loadVault(id);
+    // Resumed after backgrounding at exactly the wrong moment, the write may already be done.
+    // Same fingerprint means same keys: adopt that record rather than make a twin.
+    const twin = (await db.allMeta()).find((v) => v.fingerprint === res.fingerprint);
+    if (!twin) {
+      await db.putMeta({
+        id, v: 1, createdAt: Date.now(),
+        pkC: res.pkC, pkPq: res.pkPq,
+        fingerprint: res.fingerprint,
+        kdf: res.kdf, norm: 'NFKD',
+        hasPassphrase: g.verify.passphrase.length > 0,
+        lastBackupAt: null, backedUpSeq: 0,
+      });
+      await db.persist();
+    }
+    await loadVault(twin ? twin.id : id);
     g.fp = res.fingerprint;
     // Held only for the plate print offered on the next screen; released on lock or on leaving.
     hold(g.words);

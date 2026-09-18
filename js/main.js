@@ -20,12 +20,12 @@ registerViews({
   lang: gate.langView,
   vaults: gate.vaultsView,
 
-  genesis: genesis.genesisView,
-  'genesis-pass': genesis.genesisPassView,
-  'genesis-phrase': genesis.genesisPhraseView,
-  'genesis-derive': genesis.genesisDeriveView,
-  'genesis-verify': genesis.genesisVerifyView,
-  'genesis-create': genesis.genesisCreateView,
+  genesis: genesis.guard(genesis.genesisView),
+  'genesis-pass': genesis.guard(genesis.genesisPassView),
+  'genesis-phrase': genesis.guard(genesis.genesisPhraseView),
+  'genesis-derive': genesis.guard(genesis.genesisDeriveView),
+  'genesis-verify': genesis.guard(genesis.genesisVerifyView),
+  'genesis-create': genesis.guard(genesis.genesisCreateView),
   'genesis-done': genesis.genesisDoneView,
   print: genesis.printView,
   'print-heir': genesis.heirView,
@@ -48,9 +48,9 @@ registerViews({
 
 onLock(release);
 onLock(unlock.resetUnlock);
-// Backgrounding during setup wipes the phrase: genesis restarts rather than leaving 24 words
-// sitting in memory behind a task switcher.
-onLock(genesis.resetGenesis);
+// Backgrounding during setup: the screen is blanked like everywhere else, the phrase itself
+// survives for a bounded time so a phone call does not cost the words already written down.
+onLock(genesis.suspendGenesis);
 
 // Framebusting: frame-ancestors is not available from a meta CSP, so refuse to render at all.
 if (window.top !== window.self) {

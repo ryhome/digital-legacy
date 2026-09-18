@@ -215,8 +215,10 @@ removed, not blurred or covered, so it cannot appear in a task-switcher thumbnai
 exception: while the backup or restore screen has a share sheet or file chooser open, which Android
 reports as the page going hidden, blanking is held off — those two screens hold nothing decrypted.
 
-Setup is treated the same way. Backgrounding while the twenty-four words are on screen wipes them
-and starts the phrase again; the acknowledgements already ticked survive, and the screen says why.
+Setup is blanked the same way, but the phrase itself is not thrown away for a phone call: it
+survives in memory for up to ten minutes in the background, so you come back to the same words on
+the same page. Longer than that and it is wiped and the phrase starts again, with the screen saying
+why. The screen was empty the whole time either way.
 
 Phrase fields are never `<input type="password">`: a password field makes the browser and every
 password manager offer to remember the phrase, which is precisely what must not happen. They carry
