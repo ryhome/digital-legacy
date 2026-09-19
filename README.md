@@ -1,4 +1,4 @@
-# Dying Message
+# Digital Legacy
 
 A place to write things you want read after you are gone, and to make sure nobody reads them
 before then.
@@ -331,7 +331,7 @@ Pinned: `@scure/bip39@2.4.0`, `@noble/hashes@2.4.0`, `@noble/curves@2.4.0`,
 
 Code alone does not give you the threat model above.
 
-- [ ] Dedicated origin. Nothing else on `dyngmsg.home1ab.com`, ever.
+- [ ] Dedicated origin. Nothing else on `digital-legacy.home1ab.com`, ever.
 - [ ] `CAA 0 issue "letsencrypt.org"` on the zone, and `CAA 0 iodef` to an address you read.
 - [ ] DNSSEC signed.
 - [ ] Registrar lock and MFA on the registrar account.

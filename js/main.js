@@ -56,7 +56,7 @@ onLock(genesis.suspendGenesis);
 if (window.top !== window.self) {
   document.documentElement.replaceChildren(
     Object.assign(document.createElement('p'), {
-      textContent: 'Dying Message will not run inside a frame.',
+      textContent: 'Digital Legacy will not run inside a frame.',
     }));
 } else {
   boot();

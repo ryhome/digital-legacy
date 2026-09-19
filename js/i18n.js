@@ -88,5 +88,5 @@ export const daysSince = (ms) => Math.floor((Date.now() - ms) / 86400000);
 export function backupFilename(fingerprint) {
   const d = new Date();
   const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-  return `dyingmessage-${fingerprint}-${stamp}.dmv`;
+  return `digitallegacy-${fingerprint}-${stamp}.dmv`;
 }
