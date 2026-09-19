@@ -424,7 +424,7 @@ export const en = {
   "backup.where": "Keep it somewhere ordinary and durable: a cloud drive, an email to yourself, a USB stick in a drawer. Storing it next to your written-down phrase defeats the point — keep the two apart.",
   "backup.share": "Share the file",
   "backup.download": "Download",
-  "backup.sharenote": "Opens your phone’s share sheet. On a desktop this button reads Download instead.",
+  "backup.sharenote": "On an iPhone this opens the share sheet. Everywhere else the file downloads.",
   "backup.saved": "Saved. The backup banner is reset from today.",
   "backup.failed": "The file was not saved. Nothing has changed — try again.",
 
@@ -1095,7 +1095,7 @@ export const th = {
   "backup.where": "เก็บไว้ในที่ธรรมดาและทนทาน เช่น ไดรฟ์บนคลาวด์ อีเมลถึงตัวเอง หรือ USB ในลิ้นชัก การเก็บไว้ข้างชุดคำที่จดไว้ทำให้เสียความหมายทั้งหมด ให้แยกสองอย่างนี้ออกจากกัน",
   "backup.share": "แชร์ไฟล์",
   "backup.download": "ดาวน์โหลด",
-  "backup.sharenote": "จะเปิดแผงแชร์ของโทรศัพท์ บนคอมพิวเตอร์ปุ่มนี้จะขึ้นว่าดาวน์โหลดแทน",
+  "backup.sharenote": "บน iPhone ปุ่มนี้จะเปิดแผงแชร์ ที่อื่นไฟล์จะถูกดาวน์โหลดแทน",
   "backup.saved": "บันทึกแล้ว แถบแจ้งเตือนการสำรองข้อมูลนับใหม่ตั้งแต่วันนี้",
   "backup.failed": "ไฟล์ยังไม่ถูกบันทึก ไม่มีอะไรเปลี่ยนแปลง กรุณาลองใหม่",
 

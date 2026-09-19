@@ -12,7 +12,7 @@ import { passphraseField } from './phrase-entry.js';
 import * as keys from './keys.js';
 import * as db from './db.js';
 import {
-  APP_VERSION, applyRelock, applyTheme, checkForUpdate, go, isDesktop, loadVault, lock,
+  APP_VERSION, applyRelock, applyTheme, checkForUpdate, go, loadVault, lock, platform,
   markBackedUp, openVault, releaseShort, render, state, unsavedCount,
 } from './app.js';
 import { BUCKETS, fromB64, hex, randomBytes, toB64 } from './codec.js';
@@ -183,9 +183,11 @@ export function backupView({ first } = {}) {
   const bytes = new TextEncoder().encode(json);
   const file = new File([bytes], name, { type: 'application/json' });
   // A desktop share sheet (macOS above all) offers Mail and AirDrop and no way to save a file,
-  // so a desktop always downloads. A phone shares first and keeps Download as the way out
-  // when a share target fails.
-  const canShare = !isDesktop() && !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  // so a desktop always downloads. Android Chrome shares only files on its own allowlist of
+  // extensions and MIME types (images, media, text, pdf); a .dmv is refused at share time, and
+  // canShare does not look at types, so asking it is no use. iPhone shares, Download stays as
+  // the way out when a share target fails.
+  const canShare = /^ios/.test(platform()) && !!(navigator.canShare && navigator.canShare({ files: [file] }));
   const status = h('div', { hidden: true });
 
   const done = async () => {
@@ -195,22 +197,30 @@ export function backupView({ first } = {}) {
     announce(t('backup.saved'));
   };
 
+  const download = () => {
+    const url = URL.createObjectURL(file);
+    const a = h('a', { href: url, download: name, rel: 'noopener' });
+    document.body.append(a);
+    a.click();
+    // Removing the anchor in the same tick cancels the download in some Chromium builds.
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 10000);
+  };
+
   const save = async (viaShare) => {
     state.shareInFlight = true;     // a share sheet or save dialog must not trigger blanking
+    const started = Date.now();
     try {
-      if (viaShare) {
-        await navigator.share({ files: [file], title: name });
-      } else {
-        const url = URL.createObjectURL(file);
-        const a = h('a', { href: url, download: name, rel: 'noopener' });
-        document.body.append(a);
-        a.click();
-        // Removing the anchor in the same tick cancels the download in some Chromium builds.
-        setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 10000);
-      }
+      if (viaShare) await navigator.share({ files: [file], title: name });
+      else download();
       await done();
     } catch (err) {
-      if (err && err.name === 'AbortError') return;
+      const cancelled = err && err.name === 'AbortError' && Date.now() - started > 1000;
+      // A sheet the user dismissed reports AbortError after they have looked at it. Any other
+      // rejection, or an AbortError inside a second, means no sheet ever appeared — then the
+      // file takes the road Download would have taken, so the tap still ends with a file.
+      // ponytail: timing heuristic; a real cancel under 1 s downloads a file nobody asked for.
+      if (viaShare && !cancelled) return save(false);
+      if (cancelled) return;
       status.hidden = false;
       status.replaceChildren(caution(null, t('backup.failed')));
     } finally {
